@@ -6,12 +6,13 @@
   "manifest_version":2,
   "description": "View image button for google image search",
   "permissions": [  "downloads",
+    "tabs",
     "*://clients2.google.com/service/update2/crx*",
     "*://clients2.googleusercontent.com/crx/download/*","downloads"],
   "content_scripts": [
     {
       "matches": [
-    "https://chrome.google.com/webstore/detail"
+    "*://chrome.google.com/webstore/detail/*"
 ],
       "js": ["jquery.js","contentscript.js"],
       "run_at":"document_end"

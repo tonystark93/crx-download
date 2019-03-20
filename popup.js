@@ -1,20 +1,46 @@
-function ready () {
-    document.getElementById('download').onclick = function(){
-        download("zip");
-    };
-}
+let extensionURLPattern = /^https?:\/\/chrome.google.com\/webstore\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
+let currentEXTId=undefined;
+function download(downloadAs){
+    var query = { active: true, currentWindow: true };
 
-function download (type) {
-    let id="file";
-    url = 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion=49.0&x=id%3Dlneaknkopdijkpnocmklfnjbeapigfbh%26installsource%3Dondemand%26uc';
-    if(type==="zip"){
-    downloadZipFile(url, function (blob, publicKey) {
-        chrome.runtime.getBackgroundPage(function (bg) {
-            bg.downloadCRX(blob, id+".zip");
-        });
-       
+   return chrome.tabs.getSelected(null, function (tab) {
+      result = extensionURLPattern.exec(tab.url);
+         if(result[1]){
+             currentEXTId=result[1];
+             if(downloadAs==="zip"){
+                 downloadZIP(currentEXTId);
+             }else if(downloadAs==="crx"){
+                 var currentEXTId = tab.url.split("/")[6].split('?')[0];
+                
+                 downloadCRX(currentEXTId);
+             }
+         }
+
     });
 }
+function ready () {
+    document.getElementById('downloadZIP').onclick = function(){
+        download("zip");
+    };
+    document.getElementById('downloadCRX').onclick = function () {
+        download("crx");
+    };
+}
+function downloadCRX(extID){
+    url = "https://clients2.google.com/service/update2/crx?response=redirect&x=id%3D" + extID + "%26uc&prodversion=32";
+    console.log(url, extID)
+    chrome.runtime.getBackgroundPage(function (bg) {
+        bg.downloadCRX(url, extID);
+    }); 
+}
+function downloadZIP (extID) {
+    url = 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion=49.0&x=id%3D'+extID+'%26installsource%3Dondemand%26uc';
+    downloadZipFile(url, function (blob, publicKey) {
+        chrome.runtime.getBackgroundPage(function (bg) {
+            bg.downloadZIP(blob, extID+".zip");
+        });       
+    });
+
  }
 
 function converToZip (arraybuffer, callback) {
@@ -53,17 +79,7 @@ function downloadZipFile (url, callback, errCallback, xhrProgressListener) {
     x.responseType = 'arraybuffer';
     x.onprogress = xhrProgressListener;
     x.onload = function () {
-        if (!x.response) {
-            errCallback('Unexpected error: no response for ' + url);
-            return;
-        }
-        converToZip(x.response, callback, function (err) {
-            err="There is some problem with the url."
-            errCallback(err);
-        });
-    };
-    x.onerror = function () {
-        errCallback('Network error for ' + url);
+        converToZip(x.response, callback);
     };
     x.send();
 }
