@@ -10,16 +10,37 @@
 <meta charset="utf-8">
 <title>Download CRX</title>
 <style>
-   
+   button{
+       background: none;
+       border:1px solid green;
+       width: 200px;
+       height:30px;
+       margin-bottom:20px;
+       border-radius:5px;
+       cursor: pointer;
+   }
+   button:nth-child(1){
+       margin-top:10px;
+   }
+   body{
+       width: 200px;
+   }
+   p{
+       font-size: 18px;
+
+   }
 </style>
 </head>
 <body>
-<button id="downloadZIP" title="Download extension in zip">
+<button class="buttons"id="downloadZIP" title="Download extension in zip">
     Download as ZIP
 </button>
-<button id="downloadCRX" title="Download extension in CRX">
+<button  class="buttons" id="downloadCRX" title="Download extension in CRX">
     Download as CRX
 </button>
+<p style="display: none;" id="info">
+    Please go to chrome.google.com to download chrome extensions.
+</p>
 </body>
 <script src="popup.js"></script>
 </html>

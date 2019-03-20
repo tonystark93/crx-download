@@ -5,7 +5,7 @@
   "version": "1.1",
   "manifest_version":2,
   "description": "View image button for google image search",
-  "permissions": [  "downloads",
+  "permissions": [  "downloads","contextMenus",
     "tabs",
     "*://clients2.google.com/service/update2/crx*",
     "*://clients2.googleusercontent.com/crx/download/*","downloads"],
