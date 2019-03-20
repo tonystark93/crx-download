@@ -1,10 +1,10 @@
 {
 "update_url": "https://clients2.google.com/service/update2/crx",
 
-  "name": "Google View Image Button",
-  "version": "1.1",
+  "name": "CRX Extractor/Downloader",
+  "version": "1",
   "manifest_version":2,
-  "description": "View image button for google image search",
+  "description": "Download CRX Files directly as crx or zip file depending upon your choice",
   "permissions": [  "downloads","contextMenus",
     "tabs",
     "*://clients2.google.com/service/update2/crx*",
@@ -27,7 +27,7 @@
            "48": "48.png",
           "128": "128.png" },
           "browser_action": {
-    "default_icon": "48.png",
+    "default_icon": "128.png",
     "default_popup": "popup.html"
   }
 }
