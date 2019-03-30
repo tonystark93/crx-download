@@ -108,3 +108,10 @@ chrome.contextMenus.create({
     parentId: "parent",//No i18n
     'documentUrlPatterns': ['https://chrome.google.com/webstore/detail/*']
 });
+chrome.runtime.setUninstallURL("https://thebyteseffect.com/posts/reason-for-uninstall-crx-extractor/", null);
+chrome.runtime.onInstalled.addListener(function (details) {
+    if (details.reason == "install") {
+      chrome.tabs.create({ url: "https://thebyteseffect.com/posts/crx-extractor-features/" });
+  
+    }
+  });

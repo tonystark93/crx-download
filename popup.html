@@ -29,6 +29,32 @@
        font-size: 18px;
 
    }
+
+   .footer{
+        margin-top:10px;
+    }
+    .footer *{
+        text-decoration: none;
+    }
+    .rating > span {
+    display: inline-block;
+    position: relative;
+    width: 1.1em;
+    cursor: pointer;
+}
+.rating > span:hover:before,
+.rating > span:hover ~ span:before {
+   content: "\2605";
+   position: absolute;
+}  .rating {
+  unicode-bidi: bidi-override;
+  direction: rtl;
+}
+    .rate-container{
+        text-align: center;
+        font-size: 14px;
+        margin-right:10px;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";   }
 </style>
 </head>
 <body>
@@ -41,6 +67,14 @@
 <p style="display: none;" id="info">
     Please go to chrome.google.com to download chrome extensions.
 </p>
+<div class="container footer">
+    <div class="rate-container">
+            <span>Rate Us</span>
+        <div class="rating"id="rating">
+            <span>☆</span><span>☆</span><span>☆</span><span>☆</span><span>☆</span>
+          </div> </div>
+
+</div>
 </body>
 <script src="popup.js"></script>
 </html>

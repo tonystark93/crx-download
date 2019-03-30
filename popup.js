@@ -12,6 +12,9 @@ function ready () {
             bg.download("crx");
         });
     };
+    document.getElementById('rating').onclick = function () {
+        window.open("https://chrome.google.com/webstore/detail/crx-extractordownloader/ajkhmmldknmfjnmeedkbkkojgobmljda/reviews");
+    };
     chrome.tabs.getSelected(null, function (tab) {
         var id = extensionURLPattern.exec(tab.url);
         if(id===null||id[1]===null){
