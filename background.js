@@ -1,6 +1,20 @@
 let extensionURLPattern = /^https?:\/\/chrome.google.com\/webstore\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 let currentEXTId = undefined;
-
+function getChromeVersion () {
+    var pieces = navigator.userAgent.match(/Chrom(?:e|ium)\/([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/);
+    if (pieces == null || pieces.length != 5) {
+        return undefined;
+    }
+    pieces = pieces.map(piece => parseInt(piece, 10));
+    return {
+        major: pieces[1],
+        minor: pieces[2],
+        build: pieces[3],
+        patch: pieces[4]
+    };
+}
+let currentVersion =getChromeVersion();
+let version =currentVersion.major+"."+currentVersion.minor+"."+currentVersion.build+"."+currentVersion.patch;
 function download (downloadAs) {
     var query = { active: true, currentWindow: true };
 
@@ -9,12 +23,12 @@ function download (downloadAs) {
         if (result[1]) {
             currentEXTId = result[1];
             if (downloadAs === "zip") {
-                url = 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion=49.0&x=id%3D' + currentEXTId + '%26installsource%3Dondemand%26uc';
+                url = 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion='+version+'&x=id%3D' + currentEXTId + '%26installsource%3Dondemand%26uc&acceptformat=crx2,crx3';
                 downloadZipFile(url, function (blob, publicKey) {
-                    downloadZIP(blob, currentEXTId + ".zip");                   
+                    downloadZIP(blob, currentEXTId );
                 });
             } else if (downloadAs === "crx") {
-                url = "https://clients2.google.com/service/update2/crx?response=redirect&x=id%3D" + currentEXTId + "%26uc&prodversion=32";
+                url = "https://clients2.google.com/service/update2/crx?response=redirect&prodversion="+version+"&acceptformat=crx2,crx3&x=id%3D" + currentEXTId + "%26uc&acceptformat=crx2,crx3";
                 console.log(url, currentEXTId)
                 downloadAsCRXFile(url, currentEXTId);
             }
@@ -26,23 +40,18 @@ function converToZip (arraybuffer, callback) {
 
     var data = arraybuffer;
     var buf = new Uint8Array(data);
-
-    // 43 72 32 34 (Cr24)
-    if (buf[0] !== 67 || buf[1] !== 114 || buf[2] !== 50 || buf[3] !== 52) {
-        throw new Error("Invalid header: Does not start with Cr24.");
+    var publicKeyLength, signatureLength,header,zipStartOffset;
+    if(buf[4] ===2 ){
+        header = 16;
+        publicKeyLength = 0 + buf[8] + (buf[9] << 8) + (buf[10] << 16) + (buf[11] << 24);
+        signatureLength = 0 + buf[12] + (buf[13] << 8) + (buf[14] << 16) + (buf[15] << 24);
+        zipStartOffset = header + publicKeyLength + signatureLength;
+    }else{
+        publicKeyLength =  0 + buf[8] + (buf[9] << 8) + (buf[10] << 16) + (buf[11] << 24 >>> 0);
+        zipStartOffset = 12+publicKeyLength;
     }
-
-    // 02 00 00 00
-    if (buf[4] !== 2 || buf[5] !== 0 || buf[6] !== 0 || buf[7] !== 0) {
-        throw new Error("Unexpected crx format version number.");
-    }
-
-    var publicKeyLength = 0 + buf[8] + (buf[9] << 8) + (buf[10] << 16) + (buf[11] << 24);
-    var signatureLength = 0 + buf[12] + (buf[13] << 8) + (buf[14] << 16) + (buf[15] << 24);
-
     // 16 = Magic number (4), CRX format version (4), lengths (2x4)
-    var header = 16;
-    var zipStartOffset = header + publicKeyLength + signatureLength;
+
     var zipFragment = new Blob([
         new Uint8Array(arraybuffer, zipStartOffset)
     ], {
@@ -68,7 +77,7 @@ function downloadZIP (blob, fileName) {
     let url=URL.createObjectURL(blob);
     chrome.downloads.download({
         url: url,
-        filename: fileName,
+        filename: fileName+ ".zip",
         saveAs: true
     }, function (downloadId) {
         if (chrome.runtime.lastError) {
@@ -80,7 +89,7 @@ function downloadZIP (blob, fileName) {
 function downloadAsCRXFile(url,fileName){
     chrome.downloads.download({
         url: url,
-        filename: fileName,
+        filename: fileName+".crx",
         saveAs:true
     });
 }
@@ -112,6 +121,6 @@ chrome.runtime.setUninstallURL("https://thebyteseffect.com/posts/reason-for-unin
 chrome.runtime.onInstalled.addListener(function (details) {
     if (details.reason == "install") {
       chrome.tabs.create({ url: "https://thebyteseffect.com/posts/crx-extractor-features/" });
-  
+
     }
   });
