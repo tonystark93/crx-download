@@ -13,22 +13,33 @@ function getChromeVersion () {
         patch: pieces[4]
     };
 }
+function getNaclArch() {
+    var nacl_arch = 'arm';
+    if (navigator.userAgent.indexOf('x86') > 0) {
+        nacl_arch = 'x86-32';
+    }
+    else if (navigator.userAgent.indexOf('x64') > 0) {
+        nacl_arch = 'x86-64';
+    }
+    return nacl_arch;
+}
 let currentVersion =getChromeVersion();
 let version =currentVersion.major+"."+currentVersion.minor+"."+currentVersion.build+"."+currentVersion.patch;
+const nacl_arch = getNaclArch();
 function download (downloadAs) {
     var query = { active: true, currentWindow: true };
 
     return chrome.tabs.getSelected(null, function (tab) {
         result = extensionURLPattern.exec(tab.url);
-        if (result[1]) {
+        if (result && result[1]) {
             currentEXTId = result[1];
             if (downloadAs === "zip") {
-                url = 'https://clients2.google.com/service/update2/crx?response=redirect&prodversion='+version+'&x=id%3D' + currentEXTId + '%26installsource%3Dondemand%26uc&acceptformat=crx2,crx3';
+                url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${currentEXTId}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}`;
                 downloadZipFile(url, function (blob, publicKey) {
                     downloadZIP(blob, currentEXTId );
                 });
             } else if (downloadAs === "crx") {
-                url = "https://clients2.google.com/service/update2/crx?response=redirect&prodversion="+version+"&acceptformat=crx2,crx3&x=id%3D" + currentEXTId + "%26uc&acceptformat=crx2,crx3";
+                url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&acceptformat=crx2,crx3&x=id%3D${currentEXTId}%26uc&nacl_arch=${nacl_arch}`;
                 console.log(url, currentEXTId)
                 downloadAsCRXFile(url, currentEXTId);
             }
