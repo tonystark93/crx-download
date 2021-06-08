@@ -34,7 +34,7 @@ function download (downloadAs) {
         if (result && result[1]) {
             currentEXTId = result[1];
             if (downloadAs === "zip") {
-                url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${currentEXTId}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}`;
+                url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${currentEXTId}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
                 downloadZipFile(url, function (blob, publicKey) {
                     downloadZIP(blob, currentEXTId );
                 });
