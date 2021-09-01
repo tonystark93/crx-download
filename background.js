@@ -44,7 +44,7 @@ function download(downloadAs) {
             } else {
                 title = currentEXTId;
             }
-            var name = (title).split(" ").join("-");
+            var name = (title).replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '-').split(" ").join("-");
             if (downloadAs === "zip") {
                 url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${currentEXTId}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
                 downloadZipFile(url, function (blob, publicKey) {
