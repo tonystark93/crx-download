@@ -1,5 +1,7 @@
-let extensionURLPattern = /^https?:\/\/chrome.google.com\/webstore\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
-let currentEXTId = undefined;
+let chromeURLPattern = /^https?:\/\/chrome.google.com\/webstore\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
+let microsoftURLPattern = /^https?:\/\/microsoftedge.microsoft.com\/addons\/detail\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
+
+
 
 function getChromeVersion() {
     var pieces = navigator.userAgent.match(/Chrom(?:e|ium)\/([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/);
@@ -28,6 +30,15 @@ let currentVersion = getChromeVersion();
 let version = currentVersion.major + "." + currentVersion.minor + "." + currentVersion.build + "." + currentVersion.patch;
 const nacl_arch = getNaclArch();
 
+function getTabTitle(title,currentEXTId){
+    var title =   title.match(/^(.*[-])/);
+    if (title) {
+        title = title[0].slice(0, title[0].length - 2);
+    } else {
+        title = currentEXTId;
+    }
+    return (title).replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '-').split(" ").join("-");
+}
 function download(downloadAs) {
     var query = {
         active: true,
@@ -35,26 +46,25 @@ function download(downloadAs) {
     };
 
     return chrome.tabs.getSelected(null, function (tab) {
-        result = extensionURLPattern.exec(tab.url);
+        result = chromeURLPattern.exec(tab.url);
         if (result && result[1]) {
-            currentEXTId = result[1];
-            var title = tab.title.match(/^(.*[-])/);
-            if (title) {
-                title = title[0].slice(0, title[0].length - 2);
-            } else {
-                title = currentEXTId;
-            }
-            var name = (title).replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '-').split(" ").join("-");
+         var name=   getTabTitle(tab.title, result[1])
             if (downloadAs === "zip") {
-                url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${currentEXTId}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
+                url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${result[1]}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
                 downloadZipFile(url, function (blob, publicKey) {
                     downloadZIP(blob, name);
                 });
             } else if (downloadAs === "crx") {
-                url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&acceptformat=crx2,crx3&x=id%3D${currentEXTId}%26uc&nacl_arch=${nacl_arch}`;
+                url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&acceptformat=crx2,crx3&x=id%3D${result[1]}%26uc&nacl_arch=${nacl_arch}`;
                 console.log(url, name)
                 downloadAsCRXFile(url, name);
             }
+        }
+        var edgeId = microsoftURLPattern.exec(tab.url);
+        if (edgeId && edgeId[1] && downloadAs === "crx") {
+           var name= getTabTitle(tab.title, edgeId[1])
+            url = `https://edge.microsoft.com/extensionwebstorebase/v1/crx?response=redirect&prod=chromiumcrx&prodchannel=&x=id%3D${edgeId[1]}%26installsource%3Dondemand%26uc`;
+            downloadAsCRXFile(url, name);
         }
     });
 }
@@ -131,6 +141,15 @@ chrome.contextMenus.create({
     },
     parentId: "parent", //No i18n
     'documentUrlPatterns': ['https://chrome.google.com/webstore/detail/*']
+});
+
+chrome.contextMenus.create({
+    'title': 'Download CRX for this extension',
+    'contexts': ['all'],
+    'onclick': function () {
+        download("crx")
+    },
+    'documentUrlPatterns': ['https://microsoftedge.microsoft.com/addons/detail/*']
 });
 chrome.contextMenus.create({
     'title': 'Download ZIP for this extension',
