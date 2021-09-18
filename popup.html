@@ -6,75 +6,158 @@
  file, You can obtain one at http://mozilla.org/MPL/2.0/.
 -->
 <html>
+
 <head>
-<meta charset="utf-8">
-<title>Download CRX</title>
-<style>
-   button{
-       background: none;
-       border:1px solid green;
-       width: 200px;
-       height:30px;
-       margin-bottom:20px;
-       border-radius:5px;
-       cursor: pointer;
-   }
-   button:nth-child(1){
-       margin-top:10px;
-   }
-   body{
-       width: 200px;
-   }
-   p{
-       font-size: 18px;
-
-   }
-
-   .footer{
-        margin-top:10px;
+  <meta charset="utf-8" />
+  <title>Download CRX</title>
+  <style>
+    .buttons {
+      background: none;
+      border: 1px solid green;
+      width: 200px;
+      height: 30px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      cursor: pointer;
     }
-    .footer *{
-        text-decoration: none;
+
+    button:nth-child(1) {
+      margin-top: 10px;
     }
-    .rating > span {
+
+    body {
+      width: 200px;
+    }
+
+    p {
+      font-size: 18px;
+    }
+
+    .footer {
+      margin-top: 10px;
+    }
+
+    .footer * {
+      text-decoration: none;
+    }
+
+    .rating>span {
+      display: inline-block;
+      position: relative;
+      width: 1.1em;
+      cursor: pointer;
+    }
+
+    .rating>span:hover:before,
+    .rating>span:hover~span:before {
+      content: "\2605";
+      position: absolute;
+    }
+
+    .rating {
+      unicode-bidi: bidi-override;
+      direction: rtl;
+    }
+
+    .rate-container {
+      text-align: center;
+      font-size: 14px;
+      margin-right: 10px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji",
+        "Segoe UI Emoji", "Segoe UI Symbol";
+    }
+    label{
     display: inline-block;
-    position: relative;
-    width: 1.1em;
+    width: 200px;
+    height: 32px;
+    text-align: center;
+    padding-top: 6px;
+    font-weight: 500;
+    font-size: 13.333px;
     cursor: pointer;
 }
-.rating > span:hover:before,
-.rating > span:hover ~ span:before {
-   content: "\2605";
-   position: absolute;
-}  .rating {
-  unicode-bidi: bidi-override;
-  direction: rtl;
-}
-    .rate-container{
-        text-align: center;
-        font-size: 14px;
-        margin-right:10px;
-    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";   }
-</style>
-</head>
-<body>
-<button class="buttons"id="downloadZIP" title="Download extension in zip">
-    Download as ZIP
-</button>
-<button  class="buttons" id="downloadCRX" title="Download extension in CRX">
-    Download as CRX
-</button>
-<p style="display: none;" id="info">
-    Please go to <a href="https://chrome.google.com/webstore/category/extensions" target="_blank" rel="noreferrer noopener">chrome.google.com</a> and go to extension page to download chrome extensions.
-</p>
-<div class="container footer">
-    <div class="rate-container">
-            <span>Rate Us</span>
-        <div class="rating"id="rating">
-            <span>☆</span><span>☆</span><span>☆</span><span>☆</span><span>☆</span>
-          </div> </div>
 
+.loader {
+  position: relative;
+  text-align: center;
+  width: 50px;
+  height: 20px;
+  margin-left: auto;
+  margin-right: auto;
+  display: none;
+}
+.loader .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 3px;
+  background: green;
+  animation: loadanim 1.3s linear infinite;
+}
+.loader .dot:nth-child(2) {
+  animation-delay: -1.1s;
+}
+.loader .dot:nth-child(3) {
+  animation-delay: -0.9s;
+}
+
+@keyframes loadanim {
+  0%, 60%, 100% {
+    transform: initial;
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
+
+
+  </style>
+</head>
+
+<body>
+  <button class="buttons defaultBtn" id="downloadZIP" title="Download extension in zip">
+    Download as ZIP
+  </button>
+  <button class="buttons defaultBtn" id="downloadCRX" title="Download extension in CRX">
+    Download as CRX
+  </button>
+
+
+  <p style="display: none" id="info">
+    Please go to
+    <a href="https://chrome.google.com/webstore/category/extensions" target="_blank"
+      rel="noreferrer noopener">Chrome Extension Store</a> or <a href="https://microsoftedge.microsoft.com/addons/Microsoft-Edge-Extensions-Home" target="_blank"
+      rel="noreferrer noopener">Microsoft Addon Store</a>
+    and go to extension page to download chrome extensions.
+  </p>
+
+  <div class="buttons">
+    <label for="convertCRXToZip">Convert Local CRX file to ZIP file</label>
+    <input  id="convertCRXToZip" title="Download extension in CRX" accept=".crx" type="file" style="display: none;height:100%"> </input>
+    
+  </div>
+  <div class="loader" id='loader'>
+    <span class="dot"></span>
+    <span class="dot"></span>
+    <span class="dot"></span>
 </div>
+  <button class="buttons" id="downloadCRXToZip" title="Download ZIP File" style="display: none;">
+    Download File
+  </button>
+
+
+  <div class="container footer">
+    <div class="rate-container">
+      <span>Rate Us</span>
+      <div class="rating" id="rating">
+        <span>☆</span><span>☆</span><span>☆</span><span>☆</span><span>☆</span>
+      </div>
+    </div>
+  </div>
 </body>
 <script src="popup.js"></script>
+
 </html>
