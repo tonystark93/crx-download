@@ -20,7 +20,7 @@ function ready() {
             document.getElementById("downloadCRXToZip").style.display = "block";
         },2000);
         document.getElementById("loader").style.display = "block";
-
+        document.getElementById("downloadCRXToZip").style.display = "none";
     }
     document.getElementById("downloadCRXToZip").onclick = function () {
         var file = document.getElementById("convertCRXToZip").files[0];
