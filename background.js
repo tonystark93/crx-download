@@ -30,15 +30,16 @@ let currentVersion = getChromeVersion();
 let version = currentVersion.major + "." + currentVersion.minor + "." + currentVersion.build + "." + currentVersion.patch;
 const nacl_arch = getNaclArch();
 
-function getTabTitle(title,currentEXTId){
-    var title =   title.match(/^(.*[-])/);
+function getTabTitle(title, currentEXTId) {
+    var title = title.match(/^(.*[-])/);
     if (title) {
         title = title[0].slice(0, title[0].length - 2);
     } else {
         title = currentEXTId;
     }
-    return (title).replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '-').split(" ").join("-");
+    return (title).replace(/[&\/\\#,+()$~%.'":*?<>|{}]/g, '-').split(" ").join("-");
 }
+
 function download(downloadAs) {
     var query = {
         active: true,
@@ -48,28 +49,29 @@ function download(downloadAs) {
     return chrome.tabs.getSelected(null, function (tab) {
         result = chromeURLPattern.exec(tab.url);
         if (result && result[1]) {
-         var name=   getTabTitle(tab.title, result[1])
+            var name = getTabTitle(tab.title, result[1])
             if (downloadAs === "zip") {
                 url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${result[1]}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
-                downloadZipFile(url, function (blob, publicKey) {
-                    downloadZIP(blob, name);
+                convertURLToZip(url, function (blob, publicKey) {
+                    let url_ = URL.createObjectURL(blob);
+                    downloadFile(url_, name + ".zip");
                 });
             } else if (downloadAs === "crx") {
                 url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&acceptformat=crx2,crx3&x=id%3D${result[1]}%26uc&nacl_arch=${nacl_arch}`;
                 console.log(url, name)
-                downloadAsCRXFile(url, name);
+                downloadFile(url, name + ".crx");
             }
         }
         var edgeId = microsoftURLPattern.exec(tab.url);
         if (edgeId && edgeId[1] && downloadAs === "crx") {
-           var name= getTabTitle(tab.title, edgeId[1])
+            var name = getTabTitle(tab.title, edgeId[1])
             url = `https://edge.microsoft.com/extensionwebstorebase/v1/crx?response=redirect&prod=chromiumcrx&prodchannel=&x=id%3D${edgeId[1]}%26installsource%3Dondemand%26uc`;
-            downloadAsCRXFile(url, name);
+            downloadFile(url, name + ".crx");
         }
     });
 }
 
-function converToZip(arraybuffer, callback) {
+function ArrayBufferToBlob(arraybuffer, callback) {
 
     var data = arraybuffer;
     var buf = new Uint8Array(data);
@@ -93,26 +95,27 @@ function converToZip(arraybuffer, callback) {
     callback(zipFragment);
 }
 
-function downloadZipFile(url, callback, errCallback, xhrProgressListener) {
+function convertURLToZip(url, callback, errCallback, xhrProgressListener) {
     var requestUrl = url;
     var x = new XMLHttpRequest();
     x.open('GET', requestUrl);
     x.responseType = 'arraybuffer';
     x.onprogress = xhrProgressListener;
     x.onload = function () {
-        converToZip(x.response, callback);
+        ArrayBufferToBlob(x.response, callback);
     };
     x.send();
 }
 
 
-function downloadZIP(blob, fileName) {
-    let url = URL.createObjectURL(blob);
+
+
+function downloadFile(url, fileName) {
     chrome.downloads.download({
         url: url,
-        filename: fileName + ".zip",
+        filename: fileName,
         saveAs: true
-    }, function (downloadId) {
+    }, function () {
         if (chrome.runtime.lastError) {
             alert('An error occurred while trying to save ' + fileName + ':\n\n' +
                 chrome.runtime.lastError.message);
@@ -125,6 +128,11 @@ function downloadAsCRXFile(url, fileName) {
         url: url,
         filename: fileName + ".crx",
         saveAs: true
+    }, function () {
+        if (chrome.runtime.lastError) {
+            alert('An error occurred while trying to save ' + fileName + ':\n\n' +
+                chrome.runtime.lastError.message);
+        }
     });
 }
 chrome.contextMenus.create({
