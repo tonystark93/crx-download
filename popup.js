@@ -3,16 +3,12 @@
 let chromeURLPattern = /^https?:\/\/chrome.google.com\/webstore\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 
 let microsoftURLPattern = /^https?:\/\/microsoftedge.microsoft.com\/addons\/detail\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
-function ready() {
+async function ready() {
     document.getElementById('downloadZIP').onclick = function () {
-        chrome.runtime.getBackgroundPage(function (bg) {
-            bg.download("zip");
-        });
+        chrome.runtime.sendMessage({download:"crx"});
     };
     document.getElementById('downloadCRX').onclick = function () {
-        chrome.runtime.getBackgroundPage(function (bg) {
-            bg.download("crx");
-        });
+        chrome.runtime.sendMessage({download:"crx"});
     };
     document.getElementById("convertCRXToZip").onchange = function (files) {
         setTimeout(()=>{
@@ -58,7 +54,9 @@ function ready() {
     document.getElementById('rating').onclick = function () {
         window.open("https://chrome.google.com/webstore/detail/crx-extractordownloader/ajkhmmldknmfjnmeedkbkkojgobmljda/reviews");
     };
-    chrome.tabs.getSelected(null, function (tab) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        var tab = tabs[0];
+
         var id = chromeURLPattern.exec(tab.url);
 
         var edgeId = microsoftURLPattern.exec(tab.url);

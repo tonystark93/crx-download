@@ -1,24 +1,21 @@
 {
-"update_url": "https://clients2.google.com/service/update2/crx",
-
+  "update_url": "https://clients2.google.com/service/update2/crx",
   "name": "CRX Extractor/Downloader",
-  "version": "1.5.4",
-  "manifest_version":2,
+  "version": "1.5.5",
+  "manifest_version":3  ,
   "description": "Download CRX Files directly as crx or zip file depending upon your choice",
-  "permissions": [  "downloads","contextMenus",
-    "tabs",
-    "*://clients2.google.com/service/update2/crx*",
-    "*://clients2.googleusercontent.com/crx/download/*","downloads"],
+  "permissions": [  "downloads","contextMenus", "tabs"],
   "background":{
-    "scripts":[
-      "background.js"
-    ]
+    "service_worker": "background.js"
   },
-  "icons": { "16": "16.png",
+  "icons": {
+          "16": "16.png",
            "48": "48.png",
-          "128": "128.png" },
-          "browser_action": {
+          "128": "128.png"
+  },
+  "action": {
     "default_icon": "128.png",
     "default_popup": "popup.html"
-  }
+  },
+  "host_permissions": [ "https://clients2.google.com/service/update2/crx*",  "https://clients2.googleusercontent.com/crx/download/*"]
 }
