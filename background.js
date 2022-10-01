@@ -33,11 +33,12 @@ const nacl_arch = getNaclArch();
 function getTabTitle(title, currentEXTId) {
     var title = title.match(/^(.*[-])/);
     if (title) {
-        title = title[0].slice(0, title[0].length - 2);
+        title = title[0].split(' - ').slice(0, -1).join('-');
     } else {
         title = currentEXTId;
     }
-    return (title).replace(/[&\/\\#,+()$~%.'":*?<>|{}]/g, '-').split(" ").join("-");
+    // Ѐ-ӿ matches cyrillic characters
+    return (title).replace(/[&\/\\#,+()$~%.'":*?<>|{}\sЀ-ӿ]/g, '-').replace(/-*$/g, '').replace(/-+/g, '-');
 }
 
 function download(downloadAs) {
@@ -49,24 +50,23 @@ function download(downloadAs) {
     return chrome.tabs.getSelected(null, function (tab) {
         result = chromeURLPattern.exec(tab.url);
         if (result && result[1]) {
-            var name = getTabTitle(tab.title, result[1])
+            var name = getTabTitle(tab.title, result[1]);
             if (downloadAs === "zip") {
                 url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${result[1]}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
                 convertURLToZip(url, function (blob, publicKey) {
                     let url_ = URL.createObjectURL(blob);
-                    downloadFile(url_, name + ".zip");
+                    downloadFile(url_, name + ".zip", result[1] + ".zip");
                 });
             } else if (downloadAs === "crx") {
                 url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&acceptformat=crx2,crx3&x=id%3D${result[1]}%26uc&nacl_arch=${nacl_arch}`;
-                console.log(url, name)
-                downloadFile(url, name + ".crx");
+                downloadFile(url, name + ".crx", result[1] + ".crx");
             }
         }
         var edgeId = microsoftURLPattern.exec(tab.url);
         if (edgeId && edgeId[1] && downloadAs === "crx") {
-            var name = getTabTitle(tab.title, edgeId[1])
+            var name = getTabTitle(tab.title, edgeId[1]);
             url = `https://edge.microsoft.com/extensionwebstorebase/v1/crx?response=redirect&prod=chromiumcrx&prodchannel=&x=id%3D${edgeId[1]}%26installsource%3Dondemand%26uc`;
-            downloadFile(url, name + ".crx");
+            downloadFile(url, name + ".crx", edgeId[1] + ".crx");
         }
     });
 }
@@ -95,10 +95,9 @@ function ArrayBufferToBlob(arraybuffer, callback) {
     callback(zipFragment);
 }
 
-function convertURLToZip(url, callback, errCallback, xhrProgressListener) {
-    var requestUrl = url;
+function convertURLToZip(url, callback, xhrProgressListener) {
     var x = new XMLHttpRequest();
-    x.open('GET', requestUrl);
+    x.open('GET', url);
     x.responseType = 'arraybuffer';
     x.onprogress = xhrProgressListener;
     x.onload = function () {
@@ -108,33 +107,24 @@ function convertURLToZip(url, callback, errCallback, xhrProgressListener) {
 }
 
 
-
-
-function downloadFile(url, fileName) {
+function downloadFile(url, fileName, currentEXTId = "unknown", _fails = 0) {
     chrome.downloads.download({
         url: url,
         filename: fileName,
         saveAs: true
     }, function () {
         if (chrome.runtime.lastError) {
-            alert('An error occurred while trying to save ' + fileName + ':\n\n' +
-                chrome.runtime.lastError.message);
+            if (chrome.runtime.lastError.message === "Invalid filename" && _fails < 3) {
+                downloadFile(url, currentEXTId, currentEXTId, _fails + 1);
+            } else {
+                alert('An error occurred while trying to save ' + fileName + ':\n\n' +
+                    chrome.runtime.lastError.message);
+            }
         }
     });
 }
 
-function downloadAsCRXFile(url, fileName) {
-    chrome.downloads.download({
-        url: url,
-        filename: fileName + ".crx",
-        saveAs: true
-    }, function () {
-        if (chrome.runtime.lastError) {
-            alert('An error occurred while trying to save ' + fileName + ':\n\n' +
-                chrome.runtime.lastError.message);
-        }
-    });
-}
+
 chrome.contextMenus.create({
     'title': 'Download CRX for this extension',
     'contexts': ['all'],
