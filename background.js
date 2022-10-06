@@ -1,34 +1,55 @@
 let chromeURLPattern = /^https?:\/\/chrome.google.com\/webstore\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 let microsoftURLPattern = /^https?:\/\/microsoftedge.microsoft.com\/addons\/detail\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 
+let version = '106.0.0.0';
 
+let nacl_arch = 'arm';
 
-function getChromeVersion() {
-    var pieces = navigator.userAgent.match(/Chrom(?:e|ium)\/([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/);
-    if (pieces == null || pieces.length != 5) {
-        return undefined;
+function setChromeVersion() {
+    try {
+        return navigator.userAgentData.getHighEntropyValues(["fullVersionList"]).then((resp) => {
+            let ver = resp.fullVersionList.filter((model) => model.brand === 'Chromium' || model.brand === 'Google Chrome')
+                .map((model) => model.version)[0];
+            ver = ver.split(".").map(piece => parseInt(piece, 10));
+            version = ver[0] + "." + ver[1] + "." + ver[2] + "." + ver[3];
+            return version;
+        })
+    } catch (e) {
+        var pieces = navigator.userAgent.match(/Chrom(?:e|ium)\/([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/);
+        if (pieces == null || pieces.length != 5) {
+            return undefined;
+        }
+        pieces = pieces.map(piece => parseInt(piece, 10));
+        version = pieces[1] + "." + pieces[2] + "." + pieces[3] + "." + pieces[4];
+        Promise.resolve(version)
+
     }
-    pieces = pieces.map(piece => parseInt(piece, 10));
-    return {
-        major: pieces[1],
-        minor: pieces[2],
-        build: pieces[3],
-        patch: pieces[4]
-    };
 }
-
-function getNaclArch() {
-    var nacl_arch = 'arm';
-    if (navigator.userAgent.indexOf('x86') > 0) {
-        nacl_arch = 'x86-32';
-    } else if (navigator.userAgent.indexOf('x64') > 0) {
-        nacl_arch = 'x86-64';
+function setNaclArch() {
+    try {
+        return navigator.userAgentData.getHighEntropyValues(["architecture", "bitness"]).then((resp) => {
+            if (resp.architecture && resp.bitness) {
+                nacl_arch = resp.architecture + "-" + resp.bitness;
+            } else if (navigator.userAgent.indexOf('x86') > 0) {
+                nacl_arch = 'x86-32';
+            } else if (navigator.userAgent.indexOf('x64') > 0) {
+                nacl_arch = 'x86-64';
+            }
+            return nacl_arch;
+        })
+    } catch (e) {
+        var arch = 'arm';
+        if (navigator.userAgent.indexOf('x86') > 0) {
+            arch = 'x86-32';
+        } else if (navigator.userAgent.indexOf('x64') > 0) {
+            arch = 'x86-64';
+        }
+        nacl_arch = arch;
+        Promise.resolve();
     }
-    return nacl_arch;
 }
-let currentVersion = getChromeVersion();
-let version = currentVersion.major + "." + currentVersion.minor + "." + currentVersion.build + "." + currentVersion.patch;
-const nacl_arch = getNaclArch();
+setChromeVersion();
+setNaclArch();
 
 function getTabTitle(title, currentEXTId) {
     var title = title.match(/^(.*[-])/);
@@ -51,17 +72,20 @@ function download(downloadAs) {
         var tab = tabInfo[0];
         result = chromeURLPattern.exec(tab.url);
         if (result && result[1]) {
-            var name = getTabTitle(tab.title, result[1])
-            if (downloadAs === "zip") {
-                url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${result[1]}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
-                convertURLToZip(url, function (urlVal, publicKey) {
-                    downloadFile(urlVal, name + ".zip");
-                });
-            } else if (downloadAs === "crx" || downloadAs === 'chromeCrx') {
-                url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&acceptformat=crx2,crx3&x=id%3D${result[1]}%26uc&nacl_arch=${nacl_arch}`;
-                console.log(url, name)
-                downloadFile(url, name + ".crx");
-            }
+            
+            Promise.all([setChromeVersion(), setNaclArch()]).then(() => {
+                var name = getTabTitle(tab.title, result[1])
+                if (downloadAs === "zip") {
+                    url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${result[1]}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
+                    convertURLToZip(url, function (urlVal, publicKey) {
+                        downloadFile(urlVal, name + ".zip");
+                    });
+                } else if (downloadAs === "crx" || downloadAs === 'chromeCrx') {
+                    url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&acceptformat=crx2,crx3&x=id%3D${result[1]}%26uc&nacl_arch=${nacl_arch}`;
+                    console.log(url, name)
+                    downloadFile(url, name + ".crx");
+                }
+            })
         }
         var edgeId = microsoftURLPattern.exec(tab.url);
         if (edgeId && edgeId[1] && downloadAs === "crx") {
@@ -93,19 +117,22 @@ function ArrayBufferToBlob(arraybuffer, callback) {
     ], {
         type: 'application/zip'
     });
-    callback(zipFragment);
+    return zipFragment;
 }
 
 function convertURLToZip(url, callback, errCallback, xhrProgressListener) {
     var requestUrl = url;
-    fetch(requestUrl).then(function(response) {
-        return response.blob();
-    }).then(function(blob) {
+    fetch(requestUrl).then(function (response) {
+        return (response.arrayBuffer())
+    }).then((res) => {
+        var zipFragment = ArrayBufferToBlob(res);
         var reader = new FileReader();
-        reader.readAsDataURL(blob);
-        reader.onload =  function(e){
-            callback(e.target.result)
-        };
+        reader.readAsDataURL(zipFragment);
+        reader.onloadend = function () {
+            var base64data = reader.result;
+            callback(base64data);
+        }
+
     });
 }
 
@@ -114,8 +141,9 @@ function convertURLToZip(url, callback, errCallback, xhrProgressListener) {
 
 function downloadFile(url, fileName) {
     chrome.downloads.download({
-        url:url,
-        filename:fileName,
+        url: url,
+        filename: fileName,
+        saveAs: true
     });
 }
 
@@ -128,7 +156,7 @@ chrome.contextMenus.create({
 chrome.contextMenus.create({
     'title': 'Download CRX for this extension',
     'contexts': ['all'],
-    'id':"chromeCrx",
+    'id': "chromeCrx",
     parentId: "parent", //No i18n
     'documentUrlPatterns': ['https://chrome.google.com/webstore/detail/*']
 });
@@ -146,7 +174,7 @@ chrome.contextMenus.create({
     parentId: "parent", //No i18n
     'documentUrlPatterns': ['https://chrome.google.com/webstore/detail/*']
 });
-chrome.contextMenus.onClicked.addListener((event)=>{
+chrome.contextMenus.onClicked.addListener((event) => {
     download(event.menuItemId);
 });
 
@@ -159,7 +187,6 @@ chrome.runtime.onInstalled.addListener(function (details) {
 
     }
 });
-chrome.runtime.onMessage.addListener( function(request,sender,sendResponse)
-{
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     download(request.download);
 });
