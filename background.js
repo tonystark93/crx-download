@@ -114,7 +114,7 @@ function downloadFile(url, fileName, currentEXTId = "unknown", _fails = 0) {
         saveAs: true
     }, function () {
         if (chrome.runtime.lastError) {
-            if (chrome.runtime.lastError.message === "Invalid filename" && _fails < 3) {
+            if (chrome.runtime.lastError.message === "Invalid filename" && _fails < 1) {
                 downloadFile(url, currentEXTId, currentEXTId, _fails + 1);
             } else {
                 alert('An error occurred while trying to save ' + fileName + ':\n\n' +
