@@ -33,7 +33,7 @@ const nacl_arch = getNaclArch();
 function getTabTitle(title, currentEXTId) {
     var title = title.match(/^(.*[-])/);
     if (title) {
-        title = title[0].split(' - ').slice(0, -1).join('-');
+        title = title[0].split(' - ').join("");
     } else {
         title = currentEXTId;
     }
