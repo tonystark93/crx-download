@@ -58,7 +58,8 @@ function ready() {
     document.getElementById('rating').onclick = function () {
         window.open("https://chrome.google.com/webstore/detail/crx-extractordownloader/ajkhmmldknmfjnmeedkbkkojgobmljda/reviews");
     };
-    chrome.tabs.getSelected(null, function (tab) {
+    chrome.tabs.query({active:true}, function (tab) {
+        tab = tab[0];
         var id = chromeURLPattern.exec(tab.url);
 
         var edgeId = microsoftURLPattern.exec(tab.url);

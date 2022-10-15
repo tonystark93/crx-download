@@ -1,24 +1,24 @@
 {
-"update_url": "https://clients2.google.com/service/update2/crx",
-
-  "name": "CRX Extractor/Downloader",
-  "version": "1.5.5",
-  "manifest_version":2,
-  "description": "Download CRX Files directly as crx or zip file depending upon your choice",
-  "permissions": [  "downloads","contextMenus",
-    "tabs",
-    "*://clients2.google.com/service/update2/crx*",
-    "*://clients2.googleusercontent.com/crx/download/*","downloads"],
-  "background":{
-    "scripts":[
-      "background.js"
-    ]
-  },
-  "icons": { "16": "16.png",
-           "48": "48.png",
-          "128": "128.png" },
-          "browser_action": {
-    "default_icon": "128.png",
-    "default_popup": "popup.html"
-  }
-}
+  "update_url": "https://clients2.google.com/service/update2/crx",
+  
+    "name": "CRX Extractor/Downloader",
+    "version": "1.5.6",
+    "manifest_version":2,
+    "description": "Download CRX Files directly as crx or zip file depending upon your choice",
+    "permissions": [  "downloads","contextMenus",
+      "activeTab",
+      "*://clients2.google.com/service/update2/crx*",
+      "*://clients2.googleusercontent.com/crx/download/*","downloads"],
+    "background":{
+      "scripts":[
+        "background.js"
+      ]
+    },
+    "icons": { "16": "16.png",
+             "48": "48.png",
+            "128": "128.png" },
+            "browser_action": {
+      "default_icon": "128.png",
+      "default_popup": "popup.html"
+    }
+  }  

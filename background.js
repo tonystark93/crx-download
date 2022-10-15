@@ -47,7 +47,8 @@ function download(downloadAs) {
         currentWindow: true
     };
 
-    return chrome.tabs.getSelected(null, function (tab) {
+    return chrome.tabs.query({active:true}, function (tab) {
+        tab = tab[0];
         result = chromeURLPattern.exec(tab.url);
         if (result && result[1]) {
             var name = getTabTitle(tab.title, result[1]);
