@@ -47,7 +47,7 @@ function download(downloadAs) {
         currentWindow: true
     };
 
-    return chrome.tabs.query({active:true}, function (tab) {
+    return chrome.tabs.query(query, function (tab) {
         tab = tab[0];
         result = chromeURLPattern.exec(tab.url);
         if (result && result[1]) {
