@@ -1,7 +1,7 @@
 
 
 let chromeURLPattern = /^https?:\/\/chrome.google.com\/webstore\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
-
+let chromeNewURLPattern = /^https?:\/\/chromewebstore.google.com\/detail\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 let microsoftURLPattern = /^https?:\/\/microsoftedge.microsoft.com\/addons\/detail\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 function ready() {
     document.getElementById('downloadZIP').onclick = function () {
@@ -15,10 +15,10 @@ function ready() {
         });
     };
     document.getElementById("convertCRXToZip").onchange = function (files) {
-        setTimeout(()=>{
+        setTimeout(() => {
             document.getElementById("loader").style.display = "none";
             document.getElementById("downloadCRXToZip").style.display = "block";
-        },2000);
+        }, 2000);
         document.getElementById("loader").style.display = "block";
         document.getElementById("downloadCRXToZip").style.display = "none";
     }
@@ -58,10 +58,13 @@ function ready() {
     document.getElementById('rating').onclick = function () {
         window.open("https://chrome.google.com/webstore/detail/crx-extractordownloader/ajkhmmldknmfjnmeedkbkkojgobmljda/reviews");
     };
-    chrome.tabs.query({active:true, currentWindow: true}, function (tab) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
         tab = tab[0];
         var id = chromeURLPattern.exec(tab.url);
 
+        if (!id) {
+            id = chromeNewURLPattern.exec(tab.url);
+        }
         var edgeId = microsoftURLPattern.exec(tab.url);
 
 
