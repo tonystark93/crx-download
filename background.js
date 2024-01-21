@@ -1,99 +1,79 @@
 let chromeURLPattern = /^https?:\/\/chrome.google.com\/webstore\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 let microsoftURLPattern = /^https?:\/\/microsoftedge.microsoft.com\/addons\/detail\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 
-let version = '106.0.0.0';
+let chromeNewURLPattern = /^https?:\/\/chromewebstore.google.com\/detail\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 
-let nacl_arch = 'arm';
 
-function setChromeVersion() {
-    try {
-        return navigator.userAgentData.getHighEntropyValues(["fullVersionList"]).then((resp) => {
-            let ver = resp.fullVersionList.filter((model) => model.brand === 'Chromium' || model.brand === 'Google Chrome')
-                .map((model) => model.version)[0];
-            ver = ver.split(".").map(piece => parseInt(piece, 10));
-            version = ver[0] + "." + ver[1] + "." + ver[2] + "." + ver[3];
-            return version;
-        })
-    } catch (e) {
-        var pieces = navigator.userAgent.match(/Chrom(?:e|ium)\/([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/);
-        if (pieces == null || pieces.length != 5) {
-            return undefined;
-        }
-        pieces = pieces.map(piece => parseInt(piece, 10));
-        version = pieces[1] + "." + pieces[2] + "." + pieces[3] + "." + pieces[4];
-        Promise.resolve(version)
-
+function getChromeVersion() {
+    var pieces = navigator.userAgent.match(/Chrom(?:e|ium)\/([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/);
+    if (pieces == null || pieces.length != 5) {
+        return undefined;
     }
-}
-function setNaclArch() {
-    try {
-        return navigator.userAgentData.getHighEntropyValues(["architecture", "bitness"]).then((resp) => {
-            if (resp.architecture && resp.bitness) {
-                nacl_arch = resp.architecture + "-" + resp.bitness;
-            } else if (navigator.userAgent.indexOf('x86') > 0) {
-                nacl_arch = 'x86-32';
-            } else if (navigator.userAgent.indexOf('x64') > 0) {
-                nacl_arch = 'x86-64';
-            }
-            return nacl_arch;
-        })
-    } catch (e) {
-        var arch = 'arm';
-        if (navigator.userAgent.indexOf('x86') > 0) {
-            arch = 'x86-32';
-        } else if (navigator.userAgent.indexOf('x64') > 0) {
-            arch = 'x86-64';
-        }
-        nacl_arch = arch;
-        Promise.resolve();
-    }
-}
-setChromeVersion();
-setNaclArch();
-
-function getTabTitle(title, currentEXTId) {
-    var title = title.match(/^(.*[-])/);
-    if (title) {
-        title = title[0].slice(0, title[0].length - 2);
-    } else {
-        title = currentEXTId;
-    }
-    return (title).replace(/[&\/\\#,+()$~%.'":*?<>|{}]/g, '-').split(" ").join("-");
-}
-
-
-
-function download(downloadAs) {
-    var query = {
-        active: true
+    pieces = pieces.map(piece => parseInt(piece, 10));
+    return {
+        major: pieces[1],
+        minor: pieces[2],
+        build: pieces[3],
+        patch: pieces[4]
     };
+}
 
-    return chrome.tabs.query(query).then(function (tabInfo) {
-        var tab = tabInfo[0];
-        result = chromeURLPattern.exec(tab.url);
-        if (result && result[1]) {
-            
-            Promise.all([setChromeVersion(), setNaclArch()]).then(() => {
-                var name = getTabTitle(tab.title, result[1])
-                if (downloadAs === "zip") {
-                    url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${result[1]}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
-                    convertURLToZip(url, function (urlVal, publicKey) {
-                        downloadFile(urlVal, name + ".zip");
-                    });
-                } else if (downloadAs === "crx" || downloadAs === 'chromeCrx') {
-                    url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&acceptformat=crx2,crx3&x=id%3D${result[1]}%26uc&nacl_arch=${nacl_arch}`;
-                    console.log(url, name)
-                    downloadFile(url, name + ".crx");
-                }
-            })
+function getNaclArch() {
+    var nacl_arch = 'arm';
+    if (navigator.userAgent.indexOf('x86') > 0) {
+        nacl_arch = 'x86-32';
+    } else if (navigator.userAgent.indexOf('x64') > 0) {
+        nacl_arch = 'x86-64';
+    }
+    return nacl_arch;
+}
+let currentVersion = getChromeVersion();
+let version = currentVersion.major + "." + currentVersion.minor + "." + currentVersion.build + "." + currentVersion.patch;
+const nacl_arch = getNaclArch();
+
+function getTabTitle(title, currentEXTId, url) {
+    if (!chromeNewURLPattern.exec(url)) {
+        title = title.match(/^(.*[-])/);
+        if (title) {
+            title = title[0].split(' - ').join("");
+        } else {
+            title = currentEXTId;
         }
-        var edgeId = microsoftURLPattern.exec(tab.url);
-        if (edgeId && edgeId[1] && downloadAs === "crx") {
-            var name = getTabTitle(tab.title, edgeId[1])
-            url = `https://edge.microsoft.com/extensionwebstorebase/v1/crx?response=redirect&prod=chromiumcrx&prodchannel=&x=id%3D${edgeId[1]}%26installsource%3Dondemand%26uc`;
-            downloadFile(url, name + ".crx");
+    }
+
+    // Ѐ-ӿ matches cyrillic characters
+    return (title).replace(/[&\/\\#,+()$~%.'":*?<>|{}\sЀ-ӿ]/g, '-').replace(/-*$/g, '').replace(/-+/g, '-');
+}
+
+function download(downloadAs, tab) {
+    var query = {
+        active: true,
+        currentWindow: true
+    };
+    result = chromeURLPattern.exec(tab.url);
+    if (!result) {
+        result = chromeNewURLPattern.exec(tab.url);
+    }
+    if (result && result[1]) {
+        var name = getTabTitle(tab.title, result[1], tab.url);
+        if (downloadAs === "zip") {
+            url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${result[1]}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
+            convertURLToZip(url, function (urlVal) {
+                downloadFile(urlVal, name + ".zip");
+
+            });
+        } else if (downloadAs === "crx") {
+            url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&acceptformat=crx2,crx3&x=id%3D${result[1]}%26uc&nacl_arch=${nacl_arch}`;
+            downloadFile(url, name + ".crx", result[1] + ".crx");
         }
-    });
+    }
+    var edgeId = microsoftURLPattern.exec(tab.url);
+    if (edgeId && edgeId[1] && downloadAs === "crx") {
+        var name = getTabTitle(tab.title, edgeId[1], tab.url);
+        url = `https://edge.microsoft.com/extensionwebstorebase/v1/crx?response=redirect&prod=chromiumcrx&prodchannel=&x=id%3D${edgeId[1]}%26installsource%3Dondemand%26uc`;
+        downloadFile(url, name + ".crx", edgeId[1] + ".crx");
+    }
+    // });
 }
 
 function ArrayBufferToBlob(arraybuffer, callback) {
@@ -112,15 +92,14 @@ function ArrayBufferToBlob(arraybuffer, callback) {
     }
     // 16 = Magic number (4), CRX format version (4), lengths (2x4)
 
-    var zipFragment = new Blob([
+    return new Blob([
         new Uint8Array(arraybuffer, zipStartOffset)
     ], {
         type: 'application/zip'
     });
-    return zipFragment;
 }
 
-function convertURLToZip(url, callback, errCallback, xhrProgressListener) {
+function convertURLToZip(url, callback, xhrProgressListener) {
     var requestUrl = url;
     fetch(requestUrl).then(function (response) {
         return (response.arrayBuffer())
@@ -137,46 +116,36 @@ function convertURLToZip(url, callback, errCallback, xhrProgressListener) {
 }
 
 
-
-
-function downloadFile(url, fileName) {
+function downloadFile(url, fileName, currentEXTId = "unknown", _fails = 0) {
     chrome.downloads.download({
         url: url,
         filename: fileName,
         saveAs: true
+    }, function () {
+        if (chrome.runtime.lastError) {
+            if (chrome.runtime.lastError.message === "Invalid filename" && _fails < 1) {
+                downloadFile(url, currentEXTId, currentEXTId, _fails + 1);
+            } else {
+                alert('An error occurred while trying to save ' + fileName + ':\n\n' +
+                    chrome.runtime.lastError.message);
+            }
+        }
     });
 }
 
-chrome.contextMenus.create({
-    'title': 'Download CRX for this extension',
-    'contexts': ['all'],
-    'id': "parent",
-    'documentUrlPatterns': ['https://chrome.google.com/webstore/detail/*']
-});
-chrome.contextMenus.create({
-    'title': 'Download CRX for this extension',
-    'contexts': ['all'],
-    'id': "chromeCrx",
-    parentId: "parent", //No i18n
-    'documentUrlPatterns': ['https://chrome.google.com/webstore/detail/*']
-});
 
-chrome.contextMenus.create({
-    'title': 'Download CRX for this extension',
-    'contexts': ['all'],
-    'id': 'crx',
-    'documentUrlPatterns': ['https://microsoftedge.microsoft.com/addons/detail/*']
-});
-chrome.contextMenus.create({
-    'title': 'Download ZIP for this extension',
-    'contexts': ['all'],
-    'id': 'zip',
-    parentId: "parent", //No i18n
-    'documentUrlPatterns': ['https://chrome.google.com/webstore/detail/*']
-});
-chrome.contextMenus.onClicked.addListener((event) => {
-    download(event.menuItemId);
-});
+
+function onClickEvent(info, tab) {
+
+    if (info.menuItemId === "crx" || info.menuItemId === "crxmicrosoft") {
+        download("crx", tab)
+    } else if (info.menuItemId === "zip") {
+        download("zip", tab)
+    }
+    console.log(info)
+
+}
+chrome.contextMenus.onClicked.addListener(onClickEvent);
 
 chrome.runtime.setUninstallURL("https://thebyteseffect.com/posts/reason-for-uninstall-crx-extractor/", null);
 chrome.runtime.onInstalled.addListener(function (details) {
@@ -186,7 +155,35 @@ chrome.runtime.onInstalled.addListener(function (details) {
         });
 
     }
+    const parent = chrome.contextMenus.create({
+        'title': 'Download CRX for this extension',
+        'contexts': ['all'],
+        'id': "parent",
+        'documentUrlPatterns': ['https://chrome.google.com/webstore/detail/*', 'https://chromewebstore.google.com/detail/*']
+    });
+    chrome.contextMenus.create({
+        'title': 'Download CRX for this extension',
+        'contexts': ['all'],
+        id: "crx",
+        parentId: parent,
+        'documentUrlPatterns': ['https://chrome.google.com/webstore/detail/*', 'https://chromewebstore.google.com/detail/*']
+    });
+
+    chrome.contextMenus.create({
+        'title': 'Download CRX for this extension',
+        'contexts': ['all'],
+        parentId: parent,
+        id: "crxmicrosoft",
+        'documentUrlPatterns': ['https://microsoftedge.microsoft.com/addons/detail/*']
+    });
+    chrome.contextMenus.create({
+        'title': 'Download ZIP for this extension',
+        'contexts': ['all'],
+        id: "zip",
+        parentId: parent,
+        'documentUrlPatterns': ['https://chrome.google.com/webstore/detail/*', 'https://chromewebstore.google.com/detail/*']
+    });
 });
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    download(request.download);
+    download(request.download, request.tab);
 });
