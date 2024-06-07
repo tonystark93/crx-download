@@ -1,6 +1,5 @@
 let chromeURLPattern = /^https?:\/\/chrome.google.com\/webstore\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 let microsoftURLPattern = /^https?:\/\/microsoftedge.microsoft.com\/addons\/detail\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
-
 let chromeNewURLPattern = /^https?:\/\/chromewebstore.google.com\/detail\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 
 
@@ -40,12 +39,12 @@ function getTabTitle(title, currentEXTId, url) {
             title = currentEXTId;
         }
     }
-
     // Ѐ-ӿ matches cyrillic characters
     return (title).replace(/[&\/\\#,+()$~%.'":*?<>|{}\sЀ-ӿ]/g, '-').replace(/-*$/g, '').replace(/-+/g, '-');
 }
 
 function download(downloadAs, tab) {
+
     var query = {
         active: true,
         currentWindow: true
@@ -113,6 +112,7 @@ function convertURLToZip(url, callback, xhrProgressListener) {
         }
 
     });
+
 }
 
 
@@ -135,6 +135,7 @@ function downloadFile(url, fileName, currentEXTId = "unknown", _fails = 0) {
 
 
 
+
 function onClickEvent(info, tab) {
 
     if (info.menuItemId === "crx" || info.menuItemId === "crxmicrosoft") {
@@ -146,6 +147,7 @@ function onClickEvent(info, tab) {
 
 }
 chrome.contextMenus.onClicked.addListener(onClickEvent);
+
 
 chrome.runtime.setUninstallURL("https://thebyteseffect.com/posts/reason-for-uninstall-crx-extractor/", null);
 chrome.runtime.onInstalled.addListener(function (details) {
