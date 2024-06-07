@@ -3,17 +3,20 @@
 let chromeURLPattern = /^https?:\/\/chrome.google.com\/webstore\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 let chromeNewURLPattern = /^https?:\/\/chromewebstore.google.com\/detail\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
 let microsoftURLPattern = /^https?:\/\/microsoftedge.microsoft.com\/addons\/detail\/.+?\/([a-z]{32})(?=[\/#?]|$)/;
+
+
 function ready() {
-    document.getElementById('downloadZIP').onclick = function () {
-        chrome.runtime.getBackgroundPage(function (bg) {
-            bg.download("zip");
-        });
+    document.getElementById('downloadZIP').onclick = async function () {
+        let queryOptions = { active: true, currentWindow: true };
+        let [tab] = await chrome.tabs.query(queryOptions);
+        chrome.runtime.sendMessage({download:"zip", tab: tab});
     };
-    document.getElementById('downloadCRX').onclick = function () {
-        chrome.runtime.getBackgroundPage(function (bg) {
-            bg.download("crx");
-        });
+    document.getElementById('downloadCRX').onclick = async function () {
+        let queryOptions = { active: true, currentWindow: true };
+        let [tab] = await chrome.tabs.query(queryOptions);
+        chrome.runtime.sendMessage({download:"crx",tab:tab});
     };
+
     document.getElementById("convertCRXToZip").onchange = function (files) {
         setTimeout(() => {
             document.getElementById("loader").style.display = "none";
@@ -21,6 +24,8 @@ function ready() {
         }, 2000);
         document.getElementById("loader").style.display = "block";
         document.getElementById("downloadCRXToZip").style.display = "none";
+
+        return false;
     }
     document.getElementById("downloadCRXToZip").onclick = function () {
         var file = document.getElementById("convertCRXToZip").files[0];
