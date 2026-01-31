@@ -43,40 +43,95 @@ function getTabTitle(title, currentEXTId, url) {
     return (title).replace(/[&\/\\#,+()$~%.'":*?<>|{}\sЀ-ӿ]/g, '-').replace(/-*$/g, '').replace(/-+/g, '-');
 }
 
-function download(downloadAs, tab) {
+// Get extension version by fetching the download URL and extracting version from the redirected URL
+async function getExtensionVersion(extensionId) {
+    try {
+        const url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${extensionId}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
+        
+        // Fetch and follow redirects to get the final URL
+        const response = await fetch(url, {
+            method: 'GET',
+            redirect: 'follow'
+        });
+        
+        console.log('Final URL:', response.url);
+        
+        // Extract version from the final URL
+        // Format: https://clients2.googleusercontent.com/crx/blobs/.../EXTENSIONID_3_4_5_0.crx
+        // Extract everything after the last '/' and before '.crx', then get the part after '_'
+        const urlParts = response.url.split('/').pop(); // Get last part: "EXTENSIONID_3_4_5_0.crx"
+        const versionMatch = urlParts.match(/_([^_].*)\.crx$/i); // Match everything after first '_' until '.crx'
+        console.log('Version match:', versionMatch);
+        
+        if (versionMatch && versionMatch[1]) {
+            // Convert underscores to dots: 3_4_5_0 -> 3.4.5.0
+            let extractedVersion = versionMatch[1].replace(/_/g, '.');
+            // Keep only first three parts (e.g., 3.4.5.0 -> 3.4.5)
+            const parts = extractedVersion.split('.');
+            extractedVersion = parts.slice(0, 3).join('.');
+            console.log('Extracted version:', extractedVersion);
+            return extractedVersion;
+        }
+    } catch (error) {
+        console.error('Failed to get extension version:', error);
+    }
+    return null;
+}
 
-    var query = {
-        active: true,
-        currentWindow: true
-    };
+// Get Edge extension version from Microsoft Store API
+async function getEdgeExtensionVersion(extensionId) {
+    try {
+        const response = await fetch(`https://microsoftedge.microsoft.com/addons/getproductdetailsbycrxid/${extensionId}`);
+        const data = await response.json();
+        if (data && data.version) {
+            return data.version;
+        }
+    } catch (error) {
+        console.error('Failed to get Edge extension version:', error);
+    }
+    return null;
+}
+
+async function download(downloadAs, tab) {
     result = chromeURLPattern.exec(tab.url);
     if (!result) {
         result = chromeNewURLPattern.exec(tab.url);
     }
     if (result && result[1]) {
         var name = getTabTitle(tab.title, result[1], tab.url);
+        
+        // Get extension version
+        console.log('Start getting version, Extension ID:', result[1]);
+        const extVersion = await getExtensionVersion(result[1]);
+        console.log('Got version:', extVersion);
+        const versionSuffix = extVersion ? `-v${extVersion}` : '';
+        console.log('Version suffix:', versionSuffix);
+        console.log('Final filename:', name + versionSuffix);
+        
         if (downloadAs === "zip") {
             url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&x=id%3D${result[1]}%26installsource%3Dondemand%26uc&nacl_arch=${nacl_arch}&acceptformat=crx2,crx3`;
             convertURLToZip(url, function (urlVal) {
-                downloadFile(urlVal, name + ".zip");
-
+                downloadFile(urlVal, name + versionSuffix + ".zip");
             });
         } else if (downloadAs === "crx") {
             url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${version}&acceptformat=crx2,crx3&x=id%3D${result[1]}%26uc&nacl_arch=${nacl_arch}`;
-            downloadFile(url, name + ".crx", result[1] + ".crx");
+            downloadFile(url, name + versionSuffix + ".crx", result[1] + ".crx");
         }
     }
     var edgeId = microsoftURLPattern.exec(tab.url);
     if (edgeId && edgeId[1] && downloadAs === "crx") {
         var name = getTabTitle(tab.title, edgeId[1], tab.url);
+        
+        // Get Edge extension version
+        const extVersion = await getEdgeExtensionVersion(edgeId[1]);
+        const versionSuffix = extVersion ? `-v${extVersion}` : '';
+        
         url = `https://edge.microsoft.com/extensionwebstorebase/v1/crx?response=redirect&prod=chromiumcrx&prodchannel=&x=id%3D${edgeId[1]}%26installsource%3Dondemand%26uc`;
-        downloadFile(url, name + ".crx", edgeId[1] + ".crx");
+        downloadFile(url, name + versionSuffix + ".crx", edgeId[1] + ".crx");
     }
-    // });
 }
 
-function ArrayBufferToBlob(arraybuffer, callback) {
-
+function ArrayBufferToBlob(arraybuffer) {
     var data = arraybuffer;
     var buf = new Uint8Array(data);
     var publicKeyLength, signatureLength, header, zipStartOffset;
@@ -98,7 +153,7 @@ function ArrayBufferToBlob(arraybuffer, callback) {
     });
 }
 
-function convertURLToZip(url, callback, xhrProgressListener) {
+function convertURLToZip(url, callback) {
     var requestUrl = url;
     fetch(requestUrl).then(function (response) {
         return (response.arrayBuffer())
@@ -110,9 +165,7 @@ function convertURLToZip(url, callback, xhrProgressListener) {
             var base64data = reader.result;
             callback(base64data);
         }
-
     });
-
 }
 
 
@@ -137,14 +190,12 @@ function downloadFile(url, fileName, currentEXTId = "unknown", _fails = 0) {
 
 
 function onClickEvent(info, tab) {
-
     if (info.menuItemId === "crx" || info.menuItemId === "crxmicrosoft") {
-        download("crx", tab)
+        download("crx", tab);
     } else if (info.menuItemId === "zip") {
-        download("zip", tab)
+        download("zip", tab);
     }
-    console.log(info)
-
+    console.log(info);
 }
 chrome.contextMenus.onClicked.addListener(onClickEvent);
 
@@ -172,20 +223,28 @@ chrome.runtime.onInstalled.addListener(function (details) {
     });
 
     chrome.contextMenus.create({
-        'title': 'Download CRX for this extension',
-        'contexts': ['all'],
-        parentId: parent,
-        id: "crxmicrosoft",
-        'documentUrlPatterns': ['https://microsoftedge.microsoft.com/addons/detail/*']
-    });
-    chrome.contextMenus.create({
         'title': 'Download ZIP for this extension',
         'contexts': ['all'],
         id: "zip",
         parentId: parent,
         'documentUrlPatterns': ['https://chrome.google.com/webstore/detail/*', 'https://chromewebstore.google.com/detail/*']
     });
+    
+    // Microsoft Edge Addons context menu
+    const parentMicrosoft = chrome.contextMenus.create({
+        'title': 'Download CRX for this extension',
+        'contexts': ['all'],
+        'id': "parentMicrosoft",
+        'documentUrlPatterns': ['https://microsoftedge.microsoft.com/addons/detail/*']
+    });
+    chrome.contextMenus.create({
+        'title': 'Download CRX for this extension',
+        'contexts': ['all'],
+        id: "crxmicrosoft",
+        parentId: parentMicrosoft,
+        'documentUrlPatterns': ['https://microsoftedge.microsoft.com/addons/detail/*']
+    });
 });
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function (request) {
     download(request.download, request.tab);
 });

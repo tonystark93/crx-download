@@ -1,7 +1,7 @@
 {
   "update_url": "https://clients2.google.com/service/update2/crx",
   "name": "CRX Extractor/Downloader",
-  "version": "1.5.8",
+  "version": "1.5.9",
   "manifest_version": 3,
   "description": "Download CRX Files directly as crx or zip file depending upon your choice",
   "permissions": [
